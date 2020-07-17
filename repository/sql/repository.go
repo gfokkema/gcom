@@ -33,7 +33,7 @@ func newSQLClient(dsn string, timeout time.Duration) (*sqlx.DB, error) {
 	return client, nil
 }
 
-func NewSqlRepository(dsn string, timeout time.Duration) (gcommerce.GcomRepository, error) {
+func NewSqlRepository(dsn string, timeout time.Duration) (gcommerce.Repository, error) {
 	client, err := newSQLClient(dsn, timeout)
 	if err != nil {
 		return nil, errors.Wrap(err, "repository.NewSqlRepo")
@@ -45,7 +45,7 @@ func NewSqlRepository(dsn string, timeout time.Duration) (gcommerce.GcomReposito
 	}, nil
 }
 
-func (r *sqlRepository) Find(id int64) (*gcommerce.Article, error) {
+func (r *sqlRepository) GetArticle(id int) (*gcommerce.Article, error) {
 	ctx, cancel := context.WithTimeout(context.Background(), r.timeout)
 	defer cancel()
 
@@ -57,11 +57,12 @@ func (r *sqlRepository) Find(id int64) (*gcommerce.Article, error) {
 	return article, nil
 }
 
-func (r *sqlRepository) Store(article *gcommerce.Article) error {
+func (r *sqlRepository) PostArticle(article *gcommerce.Article) error {
 	ctx, cancel := context.WithTimeout(context.Background(), r.timeout)
 	defer cancel()
 
 	_, err := r.client.NamedExecContext(
+		ctx,
 		`INSERT INTO articles
 			(title, description, price, created_at)
 			VALUES

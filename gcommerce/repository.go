@@ -1,6 +1,6 @@
 package gcommerce
 
-type GcomRepository interface {
-	Find(id int64) (*Article, error)
-	Store(article *Article) error
+type Repository interface {
+	GetArticle(id int) (*Article, error)
+	PostArticle(article *Article) error
 }

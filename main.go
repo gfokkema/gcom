@@ -1,33 +1,38 @@
 package main
 
 import (
-	"fmt"
+	"log"
+	"net/http"
 	"time"
 
 	"github.com/gfokkema/gcom/gcommerce"
 	"github.com/gfokkema/gcom/repository/sql"
 )
 
-func main() {
-	repo, err := sql.NewSqlRepository("gcom@/gcom?parseTime=true", time.Duration(5)*time.Second)
+func NewRepo(dsn string) gcommerce.Repository {
+	repo, err := sql.NewSqlRepository(dsn, time.Duration(5)*time.Second)
 	if err != nil {
 		panic(err)
 	}
-	svc := gcommerce.NewGcomService(repo)
+	return repo
+}
 
-	article := &gcommerce.Article{
-		Title:     "goTest",
-		Desc:      "goDesc",
-		Price:     1.0,
-		CreatedAt: time.Now(),
-	}
-	err = svc.Store(article)
-	if err != nil {
-		panic(err)
-	}
-	article, err = svc.Find(1)
-	if err != nil {
-		panic(err)
-	}
-	fmt.Printf("%#v\n", article)
+func main() {
+	repo := NewRepo("gcom@/gcom?parseTime=true")
+	svc := gcommerce.NewService(repo)
+	endpoints := gcommerce.MakeEndpoints(svc)
+	router := gcommerce.NewRouter(endpoints)
+	srv := &http.Server{Addr: ":8080", Handler: router}
+	log.Fatal(srv.ListenAndServe())
+
+	// article := &gcommerce.Article{
+	// 	Title:     "goTest",
+	// 	Desc:      "goDesc",
+	// 	Price:     1.0,
+	// 	CreatedAt: time.Now(),
+	// }
+	// err := svc.Store(article)
+	// if err != nil {
+	// 	panic(err)
+	// }
 }

@@ -1,6 +1,7 @@
 package gcommerce
 
 import (
+	"context"
 	"errors"
 	"time"
 )
@@ -10,22 +11,22 @@ var (
 	ErrArticleInvalid  = errors.New("Article Invalid")
 )
 
-type gcomService struct {
-	gcomRepo GcomRepository
+type service struct {
+	repo Repository
 }
 
-func NewGcomService(gcomRepository GcomRepository) GcomService {
-	return &gcomService{
-		gcomRepository,
+func NewService(repository Repository) Service {
+	return &service{
+		repository,
 	}
 }
 
-func (g *gcomService) Find(id int64) (*Article, error) {
-	return g.gcomRepo.Find(id)
+func (s *service) GetArticle(ctx context.Context, id int) (*Article, error) {
+	return s.repo.GetArticle(id)
 }
 
-func (g *gcomService) Store(article *Article) error {
+func (s *service) PostArticle(ctx context.Context, article *Article) error {
 	// maybe validate here
 	article.CreatedAt = time.Now()
-	return g.gcomRepo.Store(article)
+	return s.repo.PostArticle(article)
 }
