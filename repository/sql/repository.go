@@ -6,7 +6,7 @@ import (
 
 	_ "github.com/go-sql-driver/mysql"
 
-	"github.com/gfokkema/gcom/gcommerce"
+	"github.com/gfokkema/gcom/article"
 	"github.com/jmoiron/sqlx"
 	"github.com/pkg/errors"
 )
@@ -33,7 +33,7 @@ func newSQLClient(dsn string, timeout time.Duration) (*sqlx.DB, error) {
 	return client, nil
 }
 
-func NewSqlRepository(dsn string, timeout time.Duration) (gcommerce.Repository, error) {
+func NewArticleRepository(dsn string, timeout time.Duration) (article.Repository, error) {
 	client, err := newSQLClient(dsn, timeout)
 	if err != nil {
 		return nil, errors.Wrap(err, "repository.NewSqlRepo")
@@ -45,30 +45,51 @@ func NewSqlRepository(dsn string, timeout time.Duration) (gcommerce.Repository, 
 	}, nil
 }
 
-func (r *sqlRepository) GetArticle(id int) (*gcommerce.Article, error) {
-	ctx, cancel := context.WithTimeout(context.Background(), r.timeout)
+func (repo *sqlRepository) Find(id article.ArticleID) (article.Article, error) {
+	ctx, cancel := context.WithTimeout(context.Background(), repo.timeout)
 	defer cancel()
 
-	article := &gcommerce.Article{}
-	err := r.client.GetContext(ctx, article, "SELECT * FROM articles WHERE id = ?", id)
+	article := article.Article{}
+	err := repo.client.GetContext(ctx, &article, "SELECT * FROM articles WHERE id = ?", id)
 	if err != nil {
-		return nil, errors.Wrap(err, "repository.Article.Find")
+		return article, errors.Wrap(err, "repository.Article.Find")
 	}
 	return article, nil
 }
 
-func (r *sqlRepository) PostArticle(article *gcommerce.Article) error {
-	ctx, cancel := context.WithTimeout(context.Background(), r.timeout)
+func (repo *sqlRepository) FindAll() ([]article.Article, error) {
+	ctx, cancel := context.WithTimeout(context.Background(), repo.timeout)
 	defer cancel()
 
-	_, err := r.client.NamedExecContext(
+	articles := []article.Article{}
+	err := repo.client.SelectContext(ctx, articles, "SELECT * FROM articles")
+	if err != nil {
+		return nil, errors.Wrap(err, "repository.Article.FindAll")
+	}
+	return articles, nil
+}
+
+func (repo *sqlRepository) Store(art article.Article) (article.ArticleID, error) {
+	ctx, cancel := context.WithTimeout(context.Background(), repo.timeout)
+	defer cancel()
+
+	v, err := repo.client.NamedExecContext(
 		ctx,
 		`INSERT INTO articles
 			(title, description, price, created_at)
 			VALUES
 			(:title, :description, :price, :created_at)
 		`,
-		article,
+		art,
 	)
-	return err
+	if err != nil {
+		return -1, errors.Wrap(err, "repository.Article.Store")
+	}
+
+	k, err := v.LastInsertId()
+	if err != nil {
+		return -1, errors.Wrap(err, "repository.Article.Store")
+	}
+
+	return article.ArticleID(k), nil
 }
